@@ -3,6 +3,7 @@ import { ConnectButton } from './ConnectButton'
 
 const NAV_ITEMS = [
   { path: '/', label: 'Feed' },
+  { path: '/recommendations', label: 'AI Picks' },
   { path: '/leaderboard', label: 'Leaderboard' },
 ] as const
 
