@@ -129,3 +129,4 @@ Desktop.ini
 
 # Build artifacts
 *.tsbuildinfo
+smartcontract/lib/forge-std/
