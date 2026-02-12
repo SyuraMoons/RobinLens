@@ -69,8 +69,13 @@ export function useWalletState(): WalletContextValue {
       setSigner(result.signer)
       setChainId(result.chainId)
       refreshBalance(result.address)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect wallet')
+    } catch (err: unknown) {
+      const msg = err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : String(err)
+      setError(msg)
     } finally {
       setIsConnecting(false)
     }

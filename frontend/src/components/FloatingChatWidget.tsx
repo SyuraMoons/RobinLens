@@ -259,7 +259,7 @@ function MessageBubble({
 
 function MarkdownText({ text }: { text: string }) {
   const lines = text.split('\n')
-  const blocks: JSX.Element[] = []
+  const blocks: React.ReactElement[] = []
   let currentList: string[] = []
 
   const flushList = () => {

@@ -3,8 +3,37 @@ import { ACTIVE_CHAIN } from './chains'
 
 const STORAGE_KEY = 'robinlens:wallet-connected'
 
-function getEthereum(): (typeof window)['ethereum'] | undefined {
-  return typeof window !== 'undefined' ? window.ethereum : undefined
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EthereumProvider = any
+
+/**
+ * Find the best available wallet provider.
+ *
+ * When multiple wallet extensions are installed (MetaMask, Coinbase Wallet,
+ * Phantom, etc.) they either share `window.ethereum` via the `providers`
+ * array or fight over it. We explicitly prefer MetaMask (real MetaMask, not
+ * Coinbase Wallet which also sets `isMetaMask`).
+ */
+function getEthereum(): EthereumProvider | undefined {
+  if (typeof window === 'undefined') return undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const eth = (window as any).ethereum
+  if (!eth) return undefined
+
+  // Multiple providers injected (EIP-5749 / EIP-6963)
+  if (eth.providers?.length) {
+    // Real MetaMask: isMetaMask=true AND NOT isCoinbaseWallet/isPhantom
+    const mm = eth.providers.find(
+      (p: EthereumProvider) => p.isMetaMask && !p.isCoinbaseWallet && !p.isPhantom,
+    )
+    if (mm) return mm
+    // Any MetaMask-like provider
+    const anyMM = eth.providers.find((p: EthereumProvider) => p.isMetaMask)
+    if (anyMM) return anyMM
+    return eth.providers[0]
+  }
+
+  return eth
 }
 
 export async function connectWallet(): Promise<{ address: string; signer: JsonRpcSigner; chainId: number }> {
@@ -13,12 +42,13 @@ export async function connectWallet(): Promise<{ address: string; signer: JsonRp
     throw new Error('No wallet detected. Install MetaMask to continue.')
   }
 
-  const provider = new BrowserProvider(ethereum)
-  const accounts: string[] = await provider.send('eth_requestAccounts', [])
-  if (!accounts.length) {
-    throw new Error('No accounts returned')
+  // Request accounts via EIP-1193
+  const accounts = (await ethereum.request({ method: 'eth_requestAccounts' })) as string[]
+  if (!accounts?.length) {
+    throw new Error('No accounts returned. Unlock your wallet and try again.')
   }
 
+  const provider = new BrowserProvider(ethereum)
   const network = await provider.getNetwork()
   const chainId = Number(network.chainId)
 
@@ -42,18 +72,23 @@ export async function reconnectWallet(): Promise<{ address: string; signer: Json
   const ethereum = getEthereum()
   if (!ethereum) return null
 
-  const provider = new BrowserProvider(ethereum)
-  const accounts: string[] = await provider.send('eth_accounts', [])
-  if (!accounts.length) {
+  try {
+    const accounts = (await ethereum.request({ method: 'eth_accounts' })) as string[]
+    if (!accounts?.length) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+
+    const provider = new BrowserProvider(ethereum)
+    const network = await provider.getNetwork()
+    const chainId = Number(network.chainId)
+    const signer = await provider.getSigner()
+
+    return { address: signer.address, signer, chainId }
+  } catch {
     localStorage.removeItem(STORAGE_KEY)
     return null
   }
-
-  const network = await provider.getNetwork()
-  const chainId = Number(network.chainId)
-  const signer = await provider.getSigner()
-
-  return { address: signer.address, signer, chainId }
 }
 
 export function disconnectWallet(): void {
