@@ -11,10 +11,27 @@ export const BASE_MAINNET = {
   },
 } as const
 
+export const BASE_SEPOLIA = {
+  chainId: 84532,
+  chainIdHex: '0x14a34',
+  name: 'Base Sepolia',
+  rpc: 'https://sepolia.base.org',
+  explorer: 'https://sepolia.basescan.org',
+  currency: {
+    name: 'Ether',
+    symbol: 'ETH',
+    decimals: 18,
+  },
+} as const
+
+const CHAIN_ENV = import.meta.env.VITE_CHAIN as string | undefined
+
+export const ACTIVE_CHAIN = CHAIN_ENV === 'sepolia' ? BASE_SEPOLIA : BASE_MAINNET
+
 export function basescanTxUrl(txHash: string): string {
-  return `${BASE_MAINNET.explorer}/tx/${txHash}`
+  return `${ACTIVE_CHAIN.explorer}/tx/${txHash}`
 }
 
 export function basescanAddressUrl(address: string): string {
-  return `${BASE_MAINNET.explorer}/address/${address}`
+  return `${ACTIVE_CHAIN.explorer}/address/${address}`
 }

@@ -1,5 +1,5 @@
 import { BrowserProvider, formatEther, type JsonRpcSigner } from 'ethers'
-import { BASE_MAINNET } from './chains'
+import { ACTIVE_CHAIN } from './chains'
 
 const STORAGE_KEY = 'robinlens:wallet-connected'
 
@@ -22,13 +22,13 @@ export async function connectWallet(): Promise<{ address: string; signer: JsonRp
   const network = await provider.getNetwork()
   const chainId = Number(network.chainId)
 
-  if (chainId !== BASE_MAINNET.chainId) {
+  if (chainId !== ACTIVE_CHAIN.chainId) {
     await switchToBase()
     // Re-create provider after chain switch
     const newProvider = new BrowserProvider(ethereum)
     const signer = await newProvider.getSigner()
     localStorage.setItem(STORAGE_KEY, '1')
-    return { address: signer.address, signer, chainId: BASE_MAINNET.chainId }
+    return { address: signer.address, signer, chainId: ACTIVE_CHAIN.chainId }
   }
 
   const signer = await provider.getSigner()
@@ -67,7 +67,7 @@ export async function switchToBase(): Promise<void> {
   try {
     await ethereum.request({
       method: 'wallet_switchEthereumChain',
-      params: [{ chainId: BASE_MAINNET.chainIdHex }],
+      params: [{ chainId: ACTIVE_CHAIN.chainIdHex }],
     })
   } catch (err: unknown) {
     const switchError = err as { code?: number }
@@ -76,11 +76,11 @@ export async function switchToBase(): Promise<void> {
       await ethereum.request({
         method: 'wallet_addEthereumChain',
         params: [{
-          chainId: BASE_MAINNET.chainIdHex,
-          chainName: BASE_MAINNET.name,
-          rpcUrls: [BASE_MAINNET.rpc],
-          blockExplorerUrls: [BASE_MAINNET.explorer],
-          nativeCurrency: BASE_MAINNET.currency,
+          chainId: ACTIVE_CHAIN.chainIdHex,
+          chainName: ACTIVE_CHAIN.name,
+          rpcUrls: [ACTIVE_CHAIN.rpc],
+          blockExplorerUrls: [ACTIVE_CHAIN.explorer],
+          nativeCurrency: ACTIVE_CHAIN.currency,
         }],
       })
     } else {

@@ -2,7 +2,7 @@ import { useWallet } from '../hooks/useWallet'
 import { truncateAddress, formatEth } from '../lib/format'
 
 export function ConnectButton() {
-  const { address, balance, isConnecting, isWrongChain, connect, disconnect, switchChain } = useWallet()
+  const { address, balance, isConnecting, isWrongChain, error, connect, disconnect, switchChain } = useWallet()
 
   if (isWrongChain && address) {
     return (
@@ -35,12 +35,17 @@ export function ConnectButton() {
   }
 
   return (
-    <button
-      onClick={connect}
-      disabled={isConnecting}
-      className="rounded-lg bg-blue px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue/80 disabled:opacity-50"
-    >
-      {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-    </button>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={connect}
+        disabled={isConnecting}
+        className="rounded-lg bg-blue px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue/80 disabled:opacity-50"
+      >
+        {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+      </button>
+      {error && (
+        <span className="max-w-48 text-xs text-red">{error}</span>
+      )}
+    </div>
   )
 }

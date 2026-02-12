@@ -4,7 +4,7 @@ import { useTrade } from '../hooks/useTrade'
 import { quoteBuy, getTokenBalance } from '../lib/contracts'
 import { useDebounce } from '../hooks/useDebounce'
 import { formatEth, formatNumber } from '../lib/format'
-import { basescanTxUrl } from '../lib/chains'
+import { basescanTxUrl, ACTIVE_CHAIN } from '../lib/chains'
 import type { Curve } from '../lib/goldsky'
 import { BrowserProvider } from 'ethers'
 
@@ -242,7 +242,7 @@ export function TradePanel({ curve, onTradeSuccess }: TradePanelProps) {
             disabled
             className="w-full rounded-lg bg-orange/20 py-2.5 text-sm font-medium text-orange"
           >
-            Switch to Base first
+            Switch to {ACTIVE_CHAIN.name} first
           </button>
         ) : (
           <button

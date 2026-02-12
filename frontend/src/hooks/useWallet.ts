@@ -9,7 +9,7 @@ import {
   onAccountsChanged,
   onChainChanged,
 } from '../lib/wallet'
-import { BASE_MAINNET } from '../lib/chains'
+import { ACTIVE_CHAIN } from '../lib/chains'
 
 interface WalletContextValue {
   address: string | null
@@ -49,7 +49,7 @@ export function useWalletState(): WalletContextValue {
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const isWrongChain = chainId !== null && chainId !== BASE_MAINNET.chainId
+  const isWrongChain = chainId !== null && chainId !== ACTIVE_CHAIN.chainId
 
   const refreshBalance = useCallback(async (addr: string) => {
     try {
