@@ -1,8 +1,5 @@
-const GOLDSKY_ORIGIN =
-  'https://api.goldsky.com/api/public/project_cmjjrebt3mxpt01rm9yi04vqq/subgraphs/pump-charts/v2/gn'
-
-// In dev mode, use Vite proxy to avoid CORS; in production, call Goldsky directly
-const SUBGRAPH_URL = import.meta.env.DEV ? '/api/subgraph' : GOLDSKY_ORIGIN
+// Both Vite dev proxy and Vercel production rewrite map /api/subgraph to Goldsky
+const SUBGRAPH_URL = '/api/subgraph'
 
 // --- Entity Types ---
 

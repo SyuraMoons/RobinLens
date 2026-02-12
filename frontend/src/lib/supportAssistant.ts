@@ -153,76 +153,65 @@ export async function askSupportAgent(
   conversation: SupportMessage[],
   sectionText: string | null,
 ): Promise<SupportAgentResponse> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined
-  const model = import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash-latest'
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined
+  const baseUrl = (import.meta.env.VITE_OPENAI_BASE_URL as string) || 'https://api.openai.com/v1'
+  const model = (import.meta.env.VITE_OPENAI_MODEL as string) || 'gpt-4o'
 
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured')
+    throw new Error('OPENAI_API_KEY not configured')
   }
 
   try {
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
-
-    const parts: Array<{ text: string }> = []
-
-    parts.push({ text: SYSTEM_PROMPT })
-
+    let contextBlock: string
     if (sectionText && sectionText.trim()) {
-      // Highest priority: the exact section the user is looking at
-      parts.push({
-        text: `Snapshot of the CURRENT SECTION the user is viewing:\n\n${sectionText}`,
-      })
+      contextBlock = `Snapshot of the CURRENT SECTION the user is viewing:\n\n${sectionText}`
     } else {
-      // Fallback: snapshot for the whole page
       const snapshot = await buildPageSnapshot()
-      parts.push({ text: `Snapshot of the CURRENT PAGE:\n\n${snapshot}` })
+      contextBlock = `Snapshot of the CURRENT PAGE:\n\n${snapshot}`
     }
+
+    const messages: Array<{ role: string; content: string }> = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: contextBlock },
+    ]
 
     for (const msg of conversation) {
-      const prefix = msg.role === 'user' ? 'User: ' : 'Assistant: '
-      parts.push({ text: `${prefix}${msg.content}\n` })
+      messages.push({ role: msg.role, content: msg.content })
     }
 
-    const response = await fetch(geminiEndpoint, {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts,
-          },
-        ],
-        generationConfig: {
-          temperature: 0.3,
-        },
+        model,
+        messages,
+        temperature: 0.3,
       }),
     })
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(`Gemini API error ${response.status}: ${text.slice(0, 200)}`)
+      throw new Error(`OpenAI API error ${response.status}: ${text.slice(0, 200)}`)
     }
 
     const data = await response.json() as {
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> }
-      }>
+      choices?: Array<{ message?: { content?: string } }>
     }
 
-    const candidate = data.candidates?.[0]
-    const contentText =
-      candidate?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
+    const contentText = data.choices?.[0]?.message?.content ?? ''
 
     if (!contentText.trim()) {
-      throw new Error('Empty assistant response from Gemini')
+      throw new Error('Empty assistant response from OpenAI')
     }
 
-    // Try to parse the JSON as requested in the system prompt
+    // Strip markdown code fences if present
+    const cleaned = contentText.replace(/^```json\s*/, '').replace(/```\s*$/, '').trim()
+
     try {
-      const parsed = JSON.parse(contentText) as {
+      const parsed = JSON.parse(cleaned) as {
         text_response?: string
         suggested_actions?: string[]
         follow_up_questions?: string[]
@@ -234,7 +223,6 @@ export async function askSupportAgent(
         followUpQuestions: parsed.follow_up_questions ?? [],
       }
     } catch {
-      // Fallback: treat whole text as the main response
       return {
         textResponse: contentText,
         suggestedActions: [],

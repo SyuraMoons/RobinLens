@@ -4,35 +4,20 @@ import { ACTIVE_CHAIN } from './chains'
 const STORAGE_KEY = 'robinlens:wallet-connected'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type EthereumProvider = any
+type Eth = any
 
-/**
- * Find the best available wallet provider.
- *
- * When multiple wallet extensions are installed (MetaMask, Coinbase Wallet,
- * Phantom, etc.) they either share `window.ethereum` via the `providers`
- * array or fight over it. We explicitly prefer MetaMask (real MetaMask, not
- * Coinbase Wallet which also sets `isMetaMask`).
- */
-function getEthereum(): EthereumProvider | undefined {
+function getEthereum(): Eth | undefined {
   if (typeof window === 'undefined') return undefined
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const eth = (window as any).ethereum
   if (!eth) return undefined
-
-  // Multiple providers injected (EIP-5749 / EIP-6963)
+  // When multiple extensions inject providers, pick MetaMask
   if (eth.providers?.length) {
-    // Real MetaMask: isMetaMask=true AND NOT isCoinbaseWallet/isPhantom
     const mm = eth.providers.find(
-      (p: EthereumProvider) => p.isMetaMask && !p.isCoinbaseWallet && !p.isPhantom,
+      (p: Eth) => p.isMetaMask && !p.isCoinbaseWallet && !p.isPhantom,
     )
-    if (mm) return mm
-    // Any MetaMask-like provider
-    const anyMM = eth.providers.find((p: EthereumProvider) => p.isMetaMask)
-    if (anyMM) return anyMM
-    return eth.providers[0]
+    return mm ?? eth.providers.find((p: Eth) => p.isMetaMask) ?? eth.providers[0]
   }
-
   return eth
 }
 
@@ -42,28 +27,23 @@ export async function connectWallet(): Promise<{ address: string; signer: JsonRp
     throw new Error('No wallet detected. Install MetaMask to continue.')
   }
 
-  // Request accounts via EIP-1193
-  const accounts = (await ethereum.request({ method: 'eth_requestAccounts' })) as string[]
-  if (!accounts?.length) {
-    throw new Error('No accounts returned. Unlock your wallet and try again.')
-  }
-
+  // Single approach: BrowserProvider handles the connection popup internally
   const provider = new BrowserProvider(ethereum)
+  const signer = await provider.getSigner()
+  const address = signer.address
   const network = await provider.getNetwork()
   const chainId = Number(network.chainId)
 
   if (chainId !== ACTIVE_CHAIN.chainId) {
     await switchToBase()
-    // Re-create provider after chain switch
     const newProvider = new BrowserProvider(ethereum)
-    const signer = await newProvider.getSigner()
+    const newSigner = await newProvider.getSigner()
     localStorage.setItem(STORAGE_KEY, '1')
-    return { address: signer.address, signer, chainId: ACTIVE_CHAIN.chainId }
+    return { address: newSigner.address, signer: newSigner, chainId: ACTIVE_CHAIN.chainId }
   }
 
-  const signer = await provider.getSigner()
   localStorage.setItem(STORAGE_KEY, '1')
-  return { address: signer.address, signer, chainId }
+  return { address, signer, chainId }
 }
 
 export async function reconnectWallet(): Promise<{ address: string; signer: JsonRpcSigner; chainId: number } | null> {
@@ -106,7 +86,6 @@ export async function switchToBase(): Promise<void> {
     })
   } catch (err: unknown) {
     const switchError = err as { code?: number }
-    // Chain not added yet (4902) -- add it
     if (switchError.code === 4902) {
       await ethereum.request({
         method: 'wallet_addEthereumChain',
