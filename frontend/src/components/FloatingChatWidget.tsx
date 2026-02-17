@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MessageCircle, X, Volume2, VolumeX, Mic } from 'lucide-react'
+import { MessageCircle, X } from 'lucide-react'
 import {
   askSupportAgent,
   type SupportMessage,
@@ -19,7 +19,6 @@ interface ChatMessage {
 
 export function FloatingChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
-  const [muted, setMuted] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -123,14 +122,7 @@ export function FloatingChatWidget() {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMuted((m) => !m)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-gray-200 hover:bg-white/10"
-              >
-                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </button>
+            <div className="flex items-center">
               <button
                 type="button"
                 onClick={toggleOpen}
@@ -184,12 +176,6 @@ export function FloatingChatWidget() {
                 placeholder="Ask me anything..."
                 className="flex-1 bg-transparent text-xs text-gray-100 placeholder:text-gray-400 focus:outline-none"
               />
-              <button
-                type="button"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-gray-200 hover:bg-white/20"
-              >
-                <Mic className="h-3.5 w-3.5" />
-              </button>
             </div>
           </form>
         </div>
@@ -321,4 +307,3 @@ function renderInline(text: string) {
 
   return parts
 }
-

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navbar } from './Navbar'
 import { FloatingChatWidget } from './FloatingChatWidget'
-import { SectionContextProvider } from '../lib/sectionContext'
+import { SectionContextProvider } from '../lib/SectionContextProvider'
 
 export function Layout({ children }: { children: ReactNode }) {
   return (

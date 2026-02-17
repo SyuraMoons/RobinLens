@@ -6,12 +6,12 @@ const RISK_KEYS = ['low', 'medium', 'high', 'critical'] as const
 
 function normalizeAction(s: unknown): (typeof ACTION_KEYS)[number] {
   const str = String(s ?? '').replace(/\s+/g, '_').toLowerCase()
-  return ACTION_KEYS.includes(str as any) ? (str as (typeof ACTION_KEYS)[number]) : 'hold'
+  return (ACTION_KEYS as readonly string[]).includes(str) ? (str as (typeof ACTION_KEYS)[number]) : 'hold'
 }
 
 function normalizeRisk(s: unknown): (typeof RISK_KEYS)[number] {
   const str = String(s ?? '').toLowerCase().trim()
-  return RISK_KEYS.includes(str as any) ? (str as (typeof RISK_KEYS)[number]) : 'medium'
+  return (RISK_KEYS as readonly string[]).includes(str) ? (str as (typeof RISK_KEYS)[number]) : 'medium'
 }
 
 export const TokenRecommendationSchema = z.object({
@@ -21,7 +21,9 @@ export const TokenRecommendationSchema = z.object({
   robinScore: z.number().min(0).max(100),
   explanation: z.string(),
   contributingSources: z.preprocess(
-    (arr) => Array.isArray(arr) ? arr.filter((s) => SOURCE_KEYS.includes(String(s) as any)) : [],
+    (arr) => Array.isArray(arr)
+      ? arr.filter((s) => (SOURCE_KEYS as readonly string[]).includes(String(s)))
+      : [],
     z.array(z.enum(SOURCE_KEYS)),
   ),
   suggestedAction: z.preprocess(normalizeAction, z.enum(ACTION_KEYS)),
